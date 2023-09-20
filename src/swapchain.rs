@@ -11,6 +11,9 @@ pub struct Swapchain {
     pub swapchain: vk::SwapchainKHR,
     pub images: Vec<vk::Image>,
     pub image_views: Vec<vk::ImageView>,
+    pub framebuffers: Vec<vk::Framebuffer>,
+    pub surface_format: vk::SurfaceFormatKHR,
+    pub extent: vk::Extent2D,
 }
 
 impl Swapchain {
@@ -23,8 +26,9 @@ impl Swapchain {
         _queues: &Queues,
     ) -> Result<Self> {
         let surface_capabilities = surface.get_capabilities(physical_device)?;
+        let extent = surface_capabilities.current_extent;
         let _surface_present_modes = surface.get_present_modes(physical_device)?;
-        let surface_formats = surface.get_formats(physical_device)?;
+        let surface_format = *surface.get_formats(physical_device)?.first().unwrap();
 
         let queue_families = [queue_families.graphics_q_index.unwrap()];
         let swapchain_create_info = vk::SwapchainCreateInfoKHR::builder()
@@ -33,8 +37,8 @@ impl Swapchain {
                 3.max(surface_capabilities.min_image_count)
                     .min(surface_capabilities.max_image_count),
             )
-            .image_format(surface_formats.first().unwrap().format)
-            .image_color_space(surface_formats.first().unwrap().color_space)
+            .image_format(surface_format.format)
+            .image_color_space(surface_format.color_space)
             .image_extent(surface_capabilities.current_extent)
             .image_array_layers(1)
             .image_usage(vk::ImageUsageFlags::COLOR_ATTACHMENT)
@@ -73,10 +77,36 @@ impl Swapchain {
             swapchain,
             images,
             image_views,
+            framebuffers: vec![],
+            surface_format,
+            extent,
         })
     }
 
+    pub fn create_framebuffers(
+        &mut self,
+        logical_device: &ash::Device,
+        renderpass: vk::RenderPass,
+    ) -> Result<()> {
+        for iv in &self.image_views {
+            let iview = [*iv];
+            let framebuffer_info = vk::FramebufferCreateInfo::builder()
+                .render_pass(renderpass)
+                .attachments(&iview)
+                .width(self.extent.width)
+                .height(self.extent.height)
+                .layers(1);
+            let fb = unsafe { logical_device.create_framebuffer(&framebuffer_info, None) }?;
+            self.framebuffers.push(fb);
+        }
+
+        Ok(())
+    }
+
     pub unsafe fn cleanup(&self, logical_device: &ash::Device) {
+        for fb in &self.framebuffers {
+            logical_device.destroy_framebuffer(*fb, None);
+        }
         for iv in &self.image_views {
             unsafe { logical_device.destroy_image_view(*iv, None) }
         }

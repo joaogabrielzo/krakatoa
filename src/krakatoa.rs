@@ -1,6 +1,7 @@
+use crate::pipeline::Pipeline;
 use crate::{
     debug::Debug,
-    init_device_and_queues, init_instance, init_physical_device_and_properties,
+    init_device_and_queues, init_instance, init_physical_device_and_properties, init_renderpass,
     queue::{QueueFamilies, Queues},
     surface::Surface,
     swapchain::Swapchain,
@@ -20,6 +21,8 @@ pub struct Krakatoa {
     pub _queues: Queues,
     pub logical_device: ash::Device,
     pub swapchain: Swapchain,
+    pub renderpass: vk::RenderPass,
+    pub pipeline: Pipeline,
 }
 
 impl Krakatoa {
@@ -42,8 +45,11 @@ impl Krakatoa {
         let (logical_device, _queues) =
             init_device_and_queues(&instance, physical_device, &queue_families)?;
 
+        /* Renderpass */
+        let renderpass = init_renderpass(&logical_device, physical_device, &surface)?;
+
         /* Swapchain */
-        let swapchain = Swapchain::init(
+        let mut swapchain = Swapchain::init(
             &instance,
             physical_device,
             &logical_device,
@@ -51,6 +57,10 @@ impl Krakatoa {
             &queue_families,
             &_queues,
         )?;
+        swapchain.create_framebuffers(&logical_device, renderpass)?;
+
+        /* Pipeline */
+        let pipeline = Pipeline::init(&logical_device, &swapchain, &renderpass)?;
 
         Ok(Self {
             window,
@@ -64,6 +74,8 @@ impl Krakatoa {
             _queues,
             logical_device,
             swapchain,
+            renderpass,
+            pipeline,
         })
     }
 }
@@ -71,14 +83,17 @@ impl Krakatoa {
 impl Drop for Krakatoa {
     fn drop(&mut self) {
         unsafe {
+            self.pipeline.cleanup(&self.logical_device);
             self.swapchain.cleanup(&self.logical_device);
-            self.logical_device.destroy_device(None);
+            self.logical_device
+                .destroy_render_pass(self.renderpass, None);
             self.surface
                 .surface_loader
                 .destroy_surface(self.surface.surface, None);
             self.debug
                 .loader
                 .destroy_debug_utils_messenger(self.debug.messenger, None);
+            self.logical_device.destroy_device(None);
             self.instance.destroy_instance(None);
         };
     }

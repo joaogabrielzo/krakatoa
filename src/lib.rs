@@ -3,12 +3,14 @@ pub mod krakatoa;
 pub mod queue;
 pub mod surface;
 pub mod swapchain;
+pub mod pipeline;
 
-use anyhow::Result;
+use anyhow::{Ok, Result};
 use ash::extensions::ext::DebugUtils;
 use ash::vk::{self, ApplicationInfo, ExtMetalSurfaceFn, InstanceCreateFlags, InstanceCreateInfo};
 use ash::{Entry, Instance};
 use queue::{QueueFamilies, Queues};
+use surface::Surface;
 
 pub unsafe extern "system" fn vulkan_debug_utils_callback(
     message_severity: vk::DebugUtilsMessageSeverityFlagsEXT,
@@ -82,7 +84,7 @@ pub fn init_device_and_queues(
     instance: &ash::Instance,
     physical_device: vk::PhysicalDevice,
     queue_families: &QueueFamilies,
-) -> Result<(ash::Device, Queues), vk::Result> {
+) -> Result<(ash::Device, Queues)> {
     let priorities = [1.0f32];
     let queue_infos = [
         vk::DeviceQueueCreateInfo::builder()
@@ -126,6 +128,58 @@ pub fn init_physical_device_and_properties(
             chosen = Some((p, properties));
         }
     }
-    
+
     Ok(chosen.unwrap())
+}
+
+pub fn init_renderpass(
+    logical_device: &ash::Device,
+    physical_device: vk::PhysicalDevice,
+    surface: &Surface,
+) -> Result<vk::RenderPass> {
+    let attachments = [vk::AttachmentDescription::builder()
+        .format(
+            surface
+                .get_formats(physical_device)?
+                .first()
+                .unwrap()
+                .format,
+        )
+        .load_op(vk::AttachmentLoadOp::CLEAR)
+        .store_op(vk::AttachmentStoreOp::STORE)
+        .stencil_load_op(vk::AttachmentLoadOp::DONT_CARE)
+        .stencil_store_op(vk::AttachmentStoreOp::DONT_CARE)
+        .initial_layout(vk::ImageLayout::UNDEFINED)
+        .final_layout(vk::ImageLayout::PRESENT_SRC_KHR)
+        .samples(vk::SampleCountFlags::TYPE_1)
+        .build()];
+
+    let color_attachment_refs = [vk::AttachmentReference {
+        attachment: 0,
+        layout: vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL,
+    }];
+
+    let subpasses = [vk::SubpassDescription::builder()
+        .color_attachments(&color_attachment_refs)
+        .pipeline_bind_point(vk::PipelineBindPoint::GRAPHICS)
+        .build()];
+
+    let subspass_dependencies = [vk::SubpassDependency::builder()
+        .src_subpass(vk::SUBPASS_EXTERNAL)
+        .src_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
+        .dst_subpass(0)
+        .dst_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
+        .dst_access_mask(
+            vk::AccessFlags::COLOR_ATTACHMENT_READ | vk::AccessFlags::COLOR_ATTACHMENT_WRITE,
+        )
+        .build()];
+
+    let renderpass_info = vk::RenderPassCreateInfo::builder()
+        .attachments(&attachments)
+        .subpasses(&subpasses)
+        .dependencies(&subspass_dependencies);
+
+    let renderpass = unsafe { logical_device.create_render_pass(&renderpass_info, None) }?;
+
+    Ok(renderpass)
 }
