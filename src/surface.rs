@@ -15,14 +15,14 @@ impl Surface {
     ) -> Result<Self> {
         let surface = unsafe {
             ash_window::create_surface(
-                &entry,
-                &instance,
+                entry,
+                instance,
                 window.raw_display_handle(),
                 window.raw_window_handle(),
                 None,
             )?
         };
-        let surface_loader = ash::extensions::khr::Surface::new(&entry, &instance);
+        let surface_loader = ash::extensions::khr::Surface::new(entry, instance);
 
         Ok(Self {
             surface,

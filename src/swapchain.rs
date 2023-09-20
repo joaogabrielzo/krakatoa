@@ -47,7 +47,7 @@ impl Swapchain {
             .pre_transform(surface_capabilities.current_transform)
             .composite_alpha(vk::CompositeAlphaFlagsKHR::OPAQUE)
             .present_mode(vk::PresentModeKHR::FIFO);
-        let swapchain_loader = ash::extensions::khr::Swapchain::new(&instance, &logical_device);
+        let swapchain_loader = ash::extensions::khr::Swapchain::new(instance, logical_device);
         let swapchain = unsafe { swapchain_loader.create_swapchain(&swapchain_create_info, None) }?;
 
         let images = unsafe { swapchain_loader.get_swapchain_images(swapchain) }?;

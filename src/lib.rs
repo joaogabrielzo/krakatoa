@@ -1,9 +1,9 @@
 pub mod debug;
 pub mod krakatoa;
+pub mod pipeline;
 pub mod queue;
 pub mod surface;
 pub mod swapchain;
-pub mod pipeline;
 
 use anyhow::{Ok, Result};
 use ash::extensions::ext::DebugUtils;
