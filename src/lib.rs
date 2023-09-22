@@ -1,6 +1,7 @@
 pub mod debug;
 pub mod krakatoa;
 pub mod pipeline;
+pub mod pools;
 pub mod queue;
 pub mod surface;
 pub mod swapchain;
@@ -9,6 +10,7 @@ use anyhow::{Ok, Result};
 use ash::extensions::ext::DebugUtils;
 use ash::vk::{self, ApplicationInfo, ExtMetalSurfaceFn, InstanceCreateFlags, InstanceCreateInfo};
 use ash::{Entry, Instance};
+use pools::Pools;
 use queue::{QueueFamilies, Queues};
 use surface::Surface;
 
@@ -182,4 +184,16 @@ pub fn init_renderpass(
     let renderpass = unsafe { logical_device.create_render_pass(&renderpass_info, None) }?;
 
     Ok(renderpass)
+}
+
+pub fn create_command_buffers(
+    logical_device: &ash::Device,
+    pools: &Pools,
+    amount: usize,
+) -> Result<Vec<vk::CommandBuffer>> {
+    let command_buffer_allocate_info = vk::CommandBufferAllocateInfo::builder()
+        .command_pool(pools.graphics_command_pool)
+        .command_buffer_count(amount as u32);
+
+    Ok(unsafe { logical_device.allocate_command_buffers(&command_buffer_allocate_info)? })
 }
