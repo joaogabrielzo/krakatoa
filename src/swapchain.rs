@@ -17,7 +17,7 @@ pub struct Swapchain {
     pub image_available: Vec<vk::Semaphore>,
     pub rendering_finished: Vec<vk::Semaphore>,
     pub may_begin_drawing: Vec<vk::Fence>,
-    pub amount_of_images: u32,
+    pub amount_of_images: usize,
     pub current_image: usize,
 }
 
@@ -105,7 +105,7 @@ impl Swapchain {
             framebuffers: vec![],
             surface_format,
             extent,
-            amount_of_images: amount_of_images as u32,
+            amount_of_images,
             current_image: 0,
             image_available,
             rendering_finished,

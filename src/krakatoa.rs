@@ -20,7 +20,7 @@ pub struct Krakatoa {
     pub physical_device: vk::PhysicalDevice,
     pub physical_device_properties: vk::PhysicalDeviceProperties,
     pub queue_families: QueueFamilies,
-    pub _queues: Queues,
+    pub queues: Queues,
     pub logical_device: ash::Device,
     pub swapchain: Swapchain,
     pub renderpass: vk::RenderPass,
@@ -46,7 +46,7 @@ impl Krakatoa {
 
         /* Logical Device */
 
-        let (logical_device, _queues) =
+        let (logical_device, queues) =
             init_device_and_queues(&instance, physical_device, &queue_families)?;
 
         /* Renderpass */
@@ -59,7 +59,7 @@ impl Krakatoa {
             &logical_device,
             &surface,
             &queue_families,
-            &_queues,
+            &queues,
         )?;
         swapchain.create_framebuffers(&logical_device, renderpass)?;
 
@@ -88,7 +88,7 @@ impl Krakatoa {
             physical_device,
             physical_device_properties,
             queue_families,
-            _queues,
+            queues,
             logical_device,
             swapchain,
             renderpass,
