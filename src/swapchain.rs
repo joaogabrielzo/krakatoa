@@ -14,6 +14,11 @@ pub struct Swapchain {
     pub framebuffers: Vec<vk::Framebuffer>,
     pub surface_format: vk::SurfaceFormatKHR,
     pub extent: vk::Extent2D,
+    pub image_available: Vec<vk::Semaphore>,
+    pub rendering_finished: Vec<vk::Semaphore>,
+    pub may_begin_drawing: Vec<vk::Fence>,
+    pub amount_of_images: u32,
+    pub current_image: usize,
 }
 
 impl Swapchain {
@@ -51,7 +56,8 @@ impl Swapchain {
         let swapchain = unsafe { swapchain_loader.create_swapchain(&swapchain_create_info, None) }?;
 
         let images = unsafe { swapchain_loader.get_swapchain_images(swapchain) }?;
-        let mut image_views = Vec::with_capacity(images.len());
+        let amount_of_images = images.len();
+        let mut image_views = Vec::with_capacity(amount_of_images);
         images.iter().for_each(|image| {
             let subresource_range = vk::ImageSubresourceRange::builder()
                 .aspect_mask(vk::ImageAspectFlags::COLOR)
@@ -72,6 +78,25 @@ impl Swapchain {
             image_views.push(image_view);
         });
 
+        let mut image_available = vec![];
+        let mut rendering_finished = vec![];
+        let mut may_begin_drawing = vec![];
+
+        let semaphore_info = vk::SemaphoreCreateInfo::builder();
+        let fence_info = vk::FenceCreateInfo::builder().flags(vk::FenceCreateFlags::SIGNALED);
+        for _ in 0..amount_of_images {
+            let semaphore_available =
+                unsafe { logical_device.create_semaphore(&semaphore_info, None)? };
+            let semaphore_finished =
+                unsafe { logical_device.create_semaphore(&semaphore_info, None)? };
+
+            image_available.push(semaphore_available);
+            rendering_finished.push(semaphore_finished);
+
+            let fence = unsafe { logical_device.create_fence(&fence_info, None)? };
+            may_begin_drawing.push(fence);
+        }
+
         Ok(Swapchain {
             swapchain_loader,
             swapchain,
@@ -80,6 +105,11 @@ impl Swapchain {
             framebuffers: vec![],
             surface_format,
             extent,
+            amount_of_images: amount_of_images as u32,
+            current_image: 0,
+            image_available,
+            rendering_finished,
+            may_begin_drawing,
         })
     }
 
@@ -109,6 +139,15 @@ impl Swapchain {
         }
         for iv in &self.image_views {
             unsafe { logical_device.destroy_image_view(*iv, None) }
+        }
+        for semaphore in &self.image_available {
+            logical_device.destroy_semaphore(*semaphore, None);
+        }
+        for semaphore in &self.rendering_finished {
+            logical_device.destroy_semaphore(*semaphore, None);
+        }
+        for fence in &self.may_begin_drawing {
+            logical_device.destroy_fence(*fence, None);
         }
 
         self.swapchain_loader
