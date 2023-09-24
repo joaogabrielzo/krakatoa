@@ -1,8 +1,12 @@
 #version 450
+layout (location = 0) in vec4 position;
+layout (location = 1) in float size;
+layout (location = 2) in vec4 colour;
 
-vec4 positions[3] = vec4[](vec4(0.0, -0.5, 0.0, 1.0), vec4(0.5, 0.5, 0.0, 1.0), vec4(-0.5, 0.5, 0.0, 1.0));
+layout (location = 0) out vec4 aColor;
 
 void main() {
-    gl_PointSize = 10.0;
-    gl_Position = positions[gl_VertexIndex];
+    gl_PointSize = size;
+    gl_Position = position;
+    aColor = colour;
 }

@@ -9,7 +9,8 @@ use crate::{
     swapchain::Swapchain,
 };
 use anyhow::{Ok, Result};
-use ash::vk;
+use ash::vk::{self, Buffer};
+use gpu_allocator::vulkan::{Allocation, AllocationCreateDesc, Allocator, AllocatorCreateDesc};
 
 pub struct Krakatoa {
     pub window: winit::window::Window,
@@ -27,6 +28,9 @@ pub struct Krakatoa {
     pub pipeline: Pipeline,
     pub pools: Pools,
     pub command_buffers: Vec<vk::CommandBuffer>,
+    pub allocator: Allocator,
+    pub buffer: vk::Buffer,
+    pub allocation: Allocation,
 }
 
 impl Krakatoa {
@@ -66,6 +70,43 @@ impl Krakatoa {
         /* Pipeline */
         let pipeline = Pipeline::init(&logical_device, &swapchain, &renderpass)?;
 
+        /* Mem Allocation */
+        let mut allocator = Allocator::new(&AllocatorCreateDesc {
+            instance: instance.clone(),
+            device: logical_device.clone(),
+            physical_device,
+            debug_settings: Default::default(),
+            buffer_device_address: false,
+        })?;
+        let buffer = unsafe {
+            logical_device.create_buffer(
+                &vk::BufferCreateInfo::builder()
+                    .size(36)
+                    .usage(vk::BufferUsageFlags::VERTEX_BUFFER)
+                    .build(),
+                None,
+            )?
+        };
+        let requirements = unsafe { logical_device.get_buffer_memory_requirements(buffer) };
+        let allocation = allocator.allocate(&AllocationCreateDesc {
+            name: "Memory Allocation",
+            requirements,
+            location: gpu_allocator::MemoryLocation::CpuToGpu,
+            linear: true,
+            allocation_scheme: gpu_allocator::vulkan::AllocationScheme::GpuAllocatorManaged,
+        })?;
+        unsafe {
+            logical_device.bind_buffer_memory(buffer, allocation.memory(), allocation.offset())?
+        };
+
+        let data_ptr = allocation.mapped_ptr().unwrap().as_ptr() as *mut f32;
+        let data = [
+            0.1f32, -0.3f32, 0.0f32, 1.0f32, // Position
+            5.0f32, // Size
+            1.0f32, 1.0f32, 0.0f32, 1.0f32, // Colour
+        ];
+        unsafe { data_ptr.copy_from_nonoverlapping(data.as_ptr(), 9) };
+
         /* Command Buffers */
         let pools = Pools::init(&logical_device, &queue_families)?;
         let command_buffers =
@@ -77,6 +118,7 @@ impl Krakatoa {
             &renderpass,
             &swapchain,
             &pipeline,
+            &buffer,
         )?;
 
         Ok(Self {
@@ -95,6 +137,9 @@ impl Krakatoa {
             pipeline,
             pools,
             command_buffers,
+            allocator,
+            buffer,
+            allocation,
         })
     }
 
@@ -104,6 +149,7 @@ impl Krakatoa {
         renderpass: &vk::RenderPass,
         swapchain: &Swapchain,
         pipeline: &Pipeline,
+        vb: &Buffer,
     ) -> Result<()> {
         for (i, &command_buffer) in command_buffers.iter().enumerate() {
             let command_buffer_begin_info = vk::CommandBufferBeginInfo::builder();
@@ -138,6 +184,7 @@ impl Krakatoa {
                     pipeline.pipeline,
                 );
 
+                logical_device.cmd_bind_vertex_buffers(command_buffer, 0, &[*vb], &[0]);
                 logical_device.cmd_draw(command_buffer, 1, 1, 0, 0);
                 logical_device.cmd_end_render_pass(command_buffer);
                 logical_device.end_command_buffer(command_buffer)?;
@@ -150,6 +197,7 @@ impl Krakatoa {
 impl Drop for Krakatoa {
     fn drop(&mut self) {
         unsafe {
+            self.logical_device.destroy_buffer(self.buffer, None);
             self.pools.cleanup(&self.logical_device);
             self.pipeline.cleanup(&self.logical_device);
             self.swapchain.cleanup(&self.logical_device);

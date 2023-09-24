@@ -33,7 +33,34 @@ impl Pipeline {
             .name(&main_function_name);
         let shader_stages = vec![vertex_stage.build(), fragment_stage.build()];
 
-        let vertex_input_info = vk::PipelineVertexInputStateCreateInfo::builder();
+        let vertex_attrib_descs = [
+            vk::VertexInputAttributeDescription {
+                location: 0,
+                binding: 0,
+                offset: 0,
+                format: vk::Format::R32G32B32A32_SFLOAT,
+            },
+            vk::VertexInputAttributeDescription {
+                binding: 0,
+                location: 1,
+                offset: 16,
+                format: vk::Format::R32_SFLOAT,
+            },
+            vk::VertexInputAttributeDescription {
+                binding: 0,
+                location: 2,
+                offset: 20,
+                format: vk::Format::R32G32B32A32_SFLOAT,
+            },
+        ];
+        let vertex_binding_descs = [vk::VertexInputBindingDescription {
+            binding: 0,
+            stride: 16,
+            input_rate: vk::VertexInputRate::VERTEX,
+        }];
+        let vertex_input_info = vk::PipelineVertexInputStateCreateInfo::builder()
+            .vertex_attribute_descriptions(&vertex_attrib_descs)
+            .vertex_binding_descriptions(&vertex_binding_descs);
         let input_assembly_info = vk::PipelineInputAssemblyStateCreateInfo::builder()
             .topology(vk::PrimitiveTopology::POINT_LIST);
 
