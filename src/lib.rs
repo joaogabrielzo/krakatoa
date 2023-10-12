@@ -1,3 +1,4 @@
+pub mod buffer;
 pub mod debug;
 pub mod krakatoa;
 pub mod pipeline;
@@ -85,6 +86,7 @@ pub fn init_instance(entry: &Entry) -> Result<Instance, ash::vk::Result> {
 pub fn init_device_and_queues(
     instance: &ash::Instance,
     physical_device: vk::PhysicalDevice,
+    physical_device_features: vk::PhysicalDeviceFeatures,
     queue_families: &QueueFamilies,
 ) -> Result<(ash::Device, Queues)> {
     let priorities = [1.0f32];
@@ -102,7 +104,8 @@ pub fn init_device_and_queues(
         vec![ash::extensions::khr::Swapchain::name().as_ptr()];
     let device_create_info = vk::DeviceCreateInfo::builder()
         .queue_create_infos(&queue_infos)
-        .enabled_extension_names(&device_extension_name_pointers);
+        .enabled_extension_names(&device_extension_name_pointers)
+        .enabled_features(&physical_device_features);
 
     let logical_device =
         unsafe { instance.create_device(physical_device, &device_create_info, None)? };
@@ -121,13 +124,18 @@ pub fn init_device_and_queues(
 
 pub fn init_physical_device_and_properties(
     instance: &ash::Instance,
-) -> Result<(vk::PhysicalDevice, vk::PhysicalDeviceProperties)> {
+) -> Result<(
+    vk::PhysicalDevice,
+    vk::PhysicalDeviceProperties,
+    vk::PhysicalDeviceFeatures,
+)> {
     let phys_devs = unsafe { instance.enumerate_physical_devices()? };
     let mut chosen = None;
     for p in phys_devs {
         let properties = unsafe { instance.get_physical_device_properties(p) };
+        let features = unsafe { instance.get_physical_device_features(p) };
         if properties.device_type == vk::PhysicalDeviceType::DISCRETE_GPU {
-            chosen = Some((p, properties));
+            chosen = Some((p, properties, features));
         }
     }
 
@@ -196,4 +204,19 @@ pub fn create_command_buffers(
         .command_buffer_count(amount as u32);
 
     Ok(unsafe { logical_device.allocate_command_buffers(&command_buffer_allocate_info)? })
+}
+
+pub fn find_memorytype_index(
+    memory_req: &vk::MemoryRequirements,
+    memory_prop: &vk::PhysicalDeviceMemoryProperties,
+    flags: vk::MemoryPropertyFlags,
+) -> Option<u32> {
+    memory_prop.memory_types[..memory_prop.memory_type_count as _]
+        .iter()
+        .enumerate()
+        .find(|(index, memory_type)| {
+            (1 << index) & memory_req.memory_type_bits != 0
+                && memory_type.property_flags & flags == flags
+        })
+        .map(|(index, _memory_type)| index as _)
 }

@@ -8,7 +8,7 @@ fn main() -> Result<()> {
     /* Window */
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new()
-        .with_title("Learn Vulkan")
+        .with_title("Krakatoa")
         .build(&event_loop)?;
     let mut krakatoa = Krakatoa::init(window)?;
 
