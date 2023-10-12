@@ -1,6 +1,6 @@
 use anyhow::Result;
 use ash::vk;
-use learn_vulkan::krakatoa::Krakatoa;
+use krakatoa::krakatoa::Krakatoa;
 use winit::event_loop::EventLoop;
 use winit::window::WindowBuilder;
 
