@@ -133,6 +133,9 @@ impl Swapchain {
         Ok(())
     }
 
+    ///# Safety
+    ///
+    ///
     pub unsafe fn cleanup(&self, logical_device: &ash::Device) {
         for fb in &self.framebuffers {
             logical_device.destroy_framebuffer(*fb, None);

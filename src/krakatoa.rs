@@ -1,8 +1,8 @@
 use crate::create_command_buffers;
+use crate::model::{InstanceData, Model};
 use crate::pipeline::Pipeline;
 use crate::pools::Pools;
 use crate::{
-    buffer::Buffer,
     debug::Debug,
     init_device_and_queues, init_instance, init_physical_device_and_properties, init_renderpass,
     queue::{QueueFamilies, Queues},
@@ -20,6 +20,7 @@ pub struct Krakatoa {
     pub surface: Surface,
     pub physical_device: vk::PhysicalDevice,
     pub physical_device_properties: vk::PhysicalDeviceProperties,
+    pub physical_device_memory_properties: vk::PhysicalDeviceMemoryProperties,
     pub queue_families: QueueFamilies,
     pub queues: Queues,
     pub logical_device: ash::Device,
@@ -28,7 +29,7 @@ pub struct Krakatoa {
     pub pipeline: Pipeline,
     pub pools: Pools,
     pub command_buffers: Vec<vk::CommandBuffer>,
-    pub buffers: Vec<Buffer>,
+    pub models: Vec<Model<[f32; 3], InstanceData>>,
 }
 
 impl Krakatoa {
@@ -76,33 +77,15 @@ impl Krakatoa {
         let memory_properties =
             unsafe { instance.get_physical_device_memory_properties(physical_device) };
 
-        let data = [
-            0.5f32, 0.0f32, 0.0f32, 1.0f32, 0.0f32, 0.2f32, 0.0f32, 1.0f32, -0.5f32, 0.0f32,
-            0.0f32, 1.0f32, -0.9f32, -0.9f32, 0.0f32, 1.0f32, 0.3f32, -0.8f32, 0.0f32, 1.0f32,
-            0.0f32, -0.6f32, 0.0f32, 1.0f32,
-        ];
+        let mut cube = Model::cube();
+        cube.insert_visibly(InstanceData {
+            position: [0.0, 0.0, 0.0],
+            colour: [1.0, 0.0, 0.0],
+        });
+        cube.update_vertex_buffer(&logical_device, memory_properties)?;
+        cube.update_instance_buffer(&logical_device, memory_properties)?;
 
-        let buffer = Buffer::init(
-            data.len() * 4,
-            vk::BufferUsageFlags::VERTEX_BUFFER,
-            memory_properties,
-            &logical_device,
-            &data,
-        )?;
-
-        let data2 = [
-            15.0f32, 0.0f32, 1.0f32, 0.0f32, 1.0f32, 15.0f32, 0.0f32, 1.0f32, 0.0f32, 1.0f32,
-            15.0f32, 0.0f32, 1.0f32, 0.0f32, 1.0f32, 1.0f32, 0.8f32, 0.7f32, 0.0f32, 1.0f32,
-            1.0f32, 0.8f32, 0.7f32, 0.0f32, 1.0f32, 1.0f32, 0.0f32, 0.0f32, 1.0f32, 1.0f32,
-        ];
-
-        let buffer2 = Buffer::init(
-            data2.len() * 4,
-            vk::BufferUsageFlags::VERTEX_BUFFER,
-            memory_properties,
-            &logical_device,
-            &data2,
-        )?;
+        let models = vec![cube];
 
         /* Command Buffers */
         let pools = Pools::init(&logical_device, &queue_families)?;
@@ -115,11 +98,8 @@ impl Krakatoa {
             &renderpass,
             &swapchain,
             &pipeline,
-            &buffer.buffer,
-            &buffer2.buffer,
+            &models,
         )?;
-
-        let buffers = vec![buffer, buffer2];
 
         Ok(Self {
             window,
@@ -129,6 +109,7 @@ impl Krakatoa {
             surface,
             physical_device,
             physical_device_properties,
+            physical_device_memory_properties: memory_properties,
             queue_families,
             queues,
             logical_device,
@@ -137,30 +118,29 @@ impl Krakatoa {
             pipeline,
             pools,
             command_buffers,
-            buffers,
+            models,
         })
     }
 
     fn fill_command_buffers(
-        command_buffers: &Vec<vk::CommandBuffer>,
+        command_buffers: &[vk::CommandBuffer],
         logical_device: &ash::Device,
         renderpass: &vk::RenderPass,
         swapchain: &Swapchain,
         pipeline: &Pipeline,
-        vb: &vk::Buffer,
-        vb2: &vk::Buffer,
+        models: &Vec<Model<[f32; 3], InstanceData>>,
     ) -> Result<()> {
-        for (i, &commandbuffer) in command_buffers.iter().enumerate() {
-            let commandbuffer_begininfo = vk::CommandBufferBeginInfo::builder();
+        for (i, &command_buffer) in command_buffers.iter().enumerate() {
+            let command_buffer_begin_info = vk::CommandBufferBeginInfo::builder();
             unsafe {
-                logical_device.begin_command_buffer(commandbuffer, &commandbuffer_begininfo)?;
+                logical_device.begin_command_buffer(command_buffer, &command_buffer_begin_info)?;
             }
             let clearvalues = [vk::ClearValue {
                 color: vk::ClearColorValue {
-                    float32: [0.0, 0.0, 0.08, 1.0],
+                    float32: [0.4, 0.5, 0.6, 1.0],
                 },
             }];
-            let renderpass_begininfo = vk::RenderPassBeginInfo::builder()
+            let renderpass_begin_info = vk::RenderPassBeginInfo::builder()
                 .render_pass(*renderpass)
                 .framebuffer(swapchain.framebuffers[i])
                 .render_area(vk::Rect2D {
@@ -170,20 +150,21 @@ impl Krakatoa {
                 .clear_values(&clearvalues);
             unsafe {
                 logical_device.cmd_begin_render_pass(
-                    commandbuffer,
-                    &renderpass_begininfo,
+                    command_buffer,
+                    &renderpass_begin_info,
                     vk::SubpassContents::INLINE,
                 );
                 logical_device.cmd_bind_pipeline(
-                    commandbuffer,
+                    command_buffer,
                     vk::PipelineBindPoint::GRAPHICS,
                     pipeline.pipeline,
                 );
-                logical_device.cmd_bind_vertex_buffers(commandbuffer, 0, &[*vb], &[0]);
-                logical_device.cmd_bind_vertex_buffers(commandbuffer, 1, &[*vb2], &[0]);
-                logical_device.cmd_draw(commandbuffer, 6, 1, 0, 0);
-                logical_device.cmd_end_render_pass(commandbuffer);
-                logical_device.end_command_buffer(commandbuffer)?;
+                models
+                    .iter()
+                    .for_each(|m| m.draw(logical_device, command_buffer));
+                logical_device.cmd_draw(command_buffer, 6, 1, 0, 0);
+                logical_device.cmd_end_render_pass(command_buffer);
+                logical_device.end_command_buffer(command_buffer)?;
             }
         }
         Ok(())
@@ -196,9 +177,14 @@ impl Drop for Krakatoa {
             self.logical_device
                 .device_wait_idle()
                 .expect("Something wrong while waiting.");
-            self.buffers.iter().for_each(|buffer| {
-                self.logical_device.destroy_buffer(buffer.buffer, None);
-            });
+            for m in &self.models {
+                if let Some(vb) = &m.vertex_buffer {
+                    self.logical_device.destroy_buffer(vb.buffer, None);
+                }
+                if let Some(ib) = &m.instance_buffer {
+                    self.logical_device.destroy_buffer(ib.buffer, None);
+                }
+            }
             self.pools.cleanup(&self.logical_device);
             self.pipeline.cleanup(&self.logical_device);
             self.swapchain.cleanup(&self.logical_device);

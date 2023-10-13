@@ -6,6 +6,7 @@ pub mod pools;
 pub mod queue;
 pub mod surface;
 pub mod swapchain;
+pub mod model;
 
 use anyhow::{Ok, Result};
 use ash::extensions::ext::DebugUtils;
@@ -15,7 +16,10 @@ use pools::Pools;
 use queue::{QueueFamilies, Queues};
 use surface::Surface;
 
-pub unsafe extern "system" fn vulkan_debug_utils_callback(
+///# Safety
+///
+///
+unsafe extern "system" fn vulkan_debug_utils_callback(
     message_severity: vk::DebugUtilsMessageSeverityFlagsEXT,
     message_type: vk::DebugUtilsMessageTypeFlagsEXT,
     p_callback_data: *const vk::DebugUtilsMessengerCallbackDataEXT,
