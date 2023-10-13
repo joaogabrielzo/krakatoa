@@ -63,7 +63,7 @@ impl Buffer {
     where
         T: Copy,
     {
-        let bytes_to_write = data.len() * std::mem::size_of::<T>();
+        let bytes_to_write = std::mem::size_of_val(data);
         if bytes_to_write > self.size_in_bytes {
             unsafe { logical_device.destroy_buffer(self.buffer, None) };
             let new_buffer = Buffer::init(

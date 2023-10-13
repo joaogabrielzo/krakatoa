@@ -128,7 +128,7 @@ impl Krakatoa {
         renderpass: &vk::RenderPass,
         swapchain: &Swapchain,
         pipeline: &Pipeline,
-        models: &Vec<Model<[f32; 3], InstanceData>>,
+        models: &[Model<[f32; 3], InstanceData>],
     ) -> Result<()> {
         for (i, &command_buffer) in command_buffers.iter().enumerate() {
             let command_buffer_begin_info = vk::CommandBufferBeginInfo::builder();

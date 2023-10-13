@@ -1,12 +1,12 @@
 pub mod buffer;
 pub mod debug;
 pub mod krakatoa;
+pub mod model;
 pub mod pipeline;
 pub mod pools;
 pub mod queue;
 pub mod surface;
 pub mod swapchain;
-pub mod model;
 
 use anyhow::{Ok, Result};
 use ash::extensions::ext::DebugUtils;
