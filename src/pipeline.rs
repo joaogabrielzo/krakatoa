@@ -35,8 +35,8 @@ impl Pipeline {
 
         let vertex_attrib_descs = [
             vk::VertexInputAttributeDescription {
-                location: 0,
                 binding: 0,
+                location: 0,
                 offset: 0,
                 format: vk::Format::R32G32B32_SFLOAT,
             },
@@ -44,12 +44,30 @@ impl Pipeline {
                 binding: 1,
                 location: 1,
                 offset: 0,
-                format: vk::Format::R32G32B32_SFLOAT,
+                format: vk::Format::R32G32B32A32_SFLOAT,
             },
             vk::VertexInputAttributeDescription {
                 binding: 1,
                 location: 2,
-                offset: 12,
+                offset: 16,
+                format: vk::Format::R32G32B32A32_SFLOAT,
+            },
+            vk::VertexInputAttributeDescription {
+                binding: 1,
+                location: 3,
+                offset: 32,
+                format: vk::Format::R32G32B32A32_SFLOAT,
+            },
+            vk::VertexInputAttributeDescription {
+                binding: 1,
+                location: 4,
+                offset: 48,
+                format: vk::Format::R32G32B32A32_SFLOAT,
+            },
+            vk::VertexInputAttributeDescription {
+                binding: 1,
+                location: 5,
+                offset: 64,
                 format: vk::Format::R32G32B32_SFLOAT,
             },
         ];
@@ -61,7 +79,7 @@ impl Pipeline {
             },
             vk::VertexInputBindingDescription {
                 binding: 1,
-                stride: 24,
+                stride: 76,
                 input_rate: vk::VertexInputRate::INSTANCE,
             },
         ];

@@ -224,14 +224,14 @@ impl<V: Copy, I: Copy> Model<V, I> {
 
 impl Model<[f32; 3], InstanceData> {
     pub fn cube() -> Self {
-        let lbf = [-0.1, 0.1, 0.0]; //lbf: left-bottom-front
-        let lbb = [-0.1, 0.1, 0.1];
-        let ltf = [-0.1, -0.1, 0.0];
-        let ltb = [-0.1, -0.1, 0.1];
-        let rbf = [0.1, 0.1, 0.0];
-        let rbb = [0.1, 0.1, 0.1];
-        let rtf = [0.1, -0.1, 0.0];
-        let rtb = [0.1, -0.1, 0.1];
+        let lbf = [-1.0, 1.0, 0.0]; //lbf: left-bottom-front
+        let lbb = [-1.0, 1.0, 1.0];
+        let ltf = [-1.0, -1.0, 0.0];
+        let ltb = [-1.0, -1.0, 1.0];
+        let rbf = [1.0, 1.0, 0.0];
+        let rbb = [1.0, 1.0, 1.0];
+        let rtf = [1.0, -1.0, 0.0];
+        let rtb = [1.0, -1.0, 1.0];
 
         Model {
             vertex_data: vec![
@@ -256,7 +256,7 @@ impl Model<[f32; 3], InstanceData> {
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct InstanceData {
-    pub position: [f32; 3],
+    pub model_matrix: [[f32; 4]; 4],
     pub colour: [f32; 3],
 }
 

@@ -11,6 +11,7 @@ use crate::{
 };
 use anyhow::{Ok, Result};
 use ash::vk::{self};
+use nalgebra::{Matrix4, Vector3};
 
 pub struct Krakatoa {
     pub window: winit::window::Window,
@@ -79,8 +80,21 @@ impl Krakatoa {
 
         let mut cube = Model::cube();
         cube.insert_visibly(InstanceData {
-            position: [0.0, 0.0, 0.0],
+            model_matrix: Matrix4::new_scaling(0.1).into(),
             colour: [1.0, 0.0, 0.0],
+        });
+        cube.insert_visibly(InstanceData {
+            model_matrix: (Matrix4::new_translation(&Vector3::new(0.0, 0.25, 0.0))
+                * Matrix4::new_scaling(0.1))
+            .into(),
+            colour: [0.6, 0.5, 0.0],
+        });
+        cube.insert_visibly(InstanceData {
+            model_matrix: (Matrix4::new_translation(&Vector3::new(0.0, 0.5, 0.0))
+                * Matrix4::from_scaled_axis(Vector3::new(0.0, 0.0, std::f32::consts::FRAC_PI_3))
+                * Matrix4::new_scaling(0.1))
+            .into(),
+            colour: [0.0, 0.5, 0.0],
         });
         cube.update_vertex_buffer(&logical_device, memory_properties)?;
         cube.update_instance_buffer(&logical_device, memory_properties)?;
