@@ -1,6 +1,8 @@
 use anyhow::Result;
 use ash::vk;
 use krakatoa::krakatoa::Krakatoa;
+use krakatoa::model::{InstanceData, Model};
+use nalgebra::{Matrix4, Vector3};
 use winit::event_loop::EventLoop;
 use winit::window::WindowBuilder;
 
@@ -11,6 +13,25 @@ fn main() -> Result<()> {
         .with_title("Krakatoa")
         .build(&event_loop)?;
     let mut krakatoa = Krakatoa::init(window)?;
+    let mut cube = Model::cube();
+    let mut angle = 0.2;
+    let my_special_cube = cube.insert_visibly(InstanceData {
+        model_matrix: (Matrix4::from_scaled_axis(Vector3::new(0.0, 0.0, angle))
+            * Matrix4::new_translation(&Vector3::new(0.0, 0.5, 0.0))
+            * Matrix4::new_scaling(0.1))
+        .into(),
+        colour: [0.0, 0.5, 0.0],
+    });
+    cube.update_vertex_buffer(
+        &krakatoa.logical_device,
+        krakatoa.physical_device_memory_properties,
+    )?;
+    cube.update_instance_buffer(
+        &krakatoa.logical_device,
+        krakatoa.physical_device_memory_properties,
+    )?;
+
+    krakatoa.models = vec![cube];
 
     use winit::event::{Event, WindowEvent};
     event_loop.run(move |event, _, controlflow| match event {
@@ -21,7 +42,14 @@ fn main() -> Result<()> {
             *controlflow = winit::event_loop::ControlFlow::Exit;
         }
         Event::MainEventsCleared => {
-            // doing the work here (later)
+            angle += 0.01;
+            krakatoa.models[0]
+                .get_mut(my_special_cube)
+                .unwrap()
+                .model_matrix = (Matrix4::new_translation(&Vector3::new(0.0, 0.5, 0.0))
+                * Matrix4::from_scaled_axis(Vector3::new(0.0, 0.0, angle))
+                * Matrix4::new_scaling(0.1))
+            .into();
             krakatoa.window.request_redraw();
         }
         Event::RedrawRequested(_) => {
@@ -50,6 +78,18 @@ fn main() -> Result<()> {
                         std::u64::MAX,
                     )
                     .expect("Waiting fences.");
+
+                krakatoa.models.iter_mut().for_each(|m| {
+                    m.update_instance_buffer(
+                        &krakatoa.logical_device,
+                        krakatoa.physical_device_memory_properties,
+                    )
+                    .expect("Updating instance buffer.")
+                });
+
+                krakatoa
+                    .update(image_index as usize)
+                    .expect("Updating the command buffer.");
 
                 krakatoa
                     .logical_device

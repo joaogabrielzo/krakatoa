@@ -80,17 +80,13 @@ impl Krakatoa {
 
         /* Mem Allocation */
         let mut cube = Model::cube();
+        let angle = 0.2;
         cube.insert_visibly(InstanceData {
-            model_matrix: (Matrix4::new_translation(&Vector3::new(0.0, 0.0, 0.1))
+            model_matrix: (Matrix4::from_scaled_axis(Vector3::new(0.0, 0.0, angle))
+                * Matrix4::new_translation(&Vector3::new(0.0, 0.5, 0.0))
                 * Matrix4::new_scaling(0.1))
             .into(),
-            colour: [0.2, 0.4, 1.0],
-        });
-        cube.insert_visibly(InstanceData {
-            model_matrix: (Matrix4::new_translation(&Vector3::new(0.05, 0.05, 0.0))
-                * Matrix4::new_scaling(0.1))
-            .into(),
-            colour: [1.0, 1.0, 0.2],
+            colour: [0.0, 0.5, 0.0],
         });
         cube.update_vertex_buffer(&logical_device, memory_properties)?;
         cube.update_instance_buffer(&logical_device, memory_properties)?;
@@ -101,15 +97,6 @@ impl Krakatoa {
         let pools = Pools::init(&logical_device, &queue_families)?;
         let command_buffers =
             create_command_buffers(&logical_device, &pools, swapchain.framebuffers.len())?;
-
-        Self::fill_command_buffers(
-            &command_buffers,
-            &logical_device,
-            &renderpass,
-            &swapchain,
-            &pipeline,
-            &models,
-        )?;
 
         Ok(Self {
             window,
@@ -132,59 +119,54 @@ impl Krakatoa {
         })
     }
 
-    fn fill_command_buffers(
-        command_buffers: &[vk::CommandBuffer],
-        logical_device: &ash::Device,
-        renderpass: &vk::RenderPass,
-        swapchain: &Swapchain,
-        pipeline: &Pipeline,
-        models: &[Model<[f32; 3], InstanceData>],
-    ) -> Result<()> {
-        for (i, &command_buffer) in command_buffers.iter().enumerate() {
-            let command_buffer_begin_info = vk::CommandBufferBeginInfo::builder();
-            unsafe {
-                logical_device.begin_command_buffer(command_buffer, &command_buffer_begin_info)?;
-            }
-            let clearvalues = [
-                vk::ClearValue {
-                    color: vk::ClearColorValue {
-                        float32: [0.4, 0.5, 0.6, 1.0],
-                    },
+    pub fn update(&mut self, index: usize) -> Result<()> {
+        let command_buffer = self.command_buffers[index];
+        let command_buffer_begin_info = vk::CommandBufferBeginInfo::builder();
+        unsafe {
+            self.logical_device
+                .begin_command_buffer(command_buffer, &command_buffer_begin_info)
+        }?;
+
+        let clear_values = [
+            vk::ClearValue {
+                color: vk::ClearColorValue {
+                    float32: [0.4, 0.5, 0.6, 1.0],
                 },
-                vk::ClearValue {
-                    depth_stencil: vk::ClearDepthStencilValue {
-                        depth: 1.0,
-                        stencil: 0,
-                    },
+            },
+            vk::ClearValue {
+                depth_stencil: vk::ClearDepthStencilValue {
+                    depth: 1.0,
+                    stencil: 0,
                 },
-            ];
-            let renderpass_begin_info = vk::RenderPassBeginInfo::builder()
-                .render_pass(*renderpass)
-                .framebuffer(swapchain.framebuffers[i])
-                .render_area(vk::Rect2D {
-                    offset: vk::Offset2D { x: 0, y: 0 },
-                    extent: swapchain.extent,
-                })
-                .clear_values(&clearvalues);
-            unsafe {
-                logical_device.cmd_begin_render_pass(
-                    command_buffer,
-                    &renderpass_begin_info,
-                    vk::SubpassContents::INLINE,
-                );
-                logical_device.cmd_bind_pipeline(
-                    command_buffer,
-                    vk::PipelineBindPoint::GRAPHICS,
-                    pipeline.pipeline,
-                );
-                models
-                    .iter()
-                    .for_each(|m| m.draw(logical_device, command_buffer));
-                logical_device.cmd_draw(command_buffer, 6, 1, 0, 0);
-                logical_device.cmd_end_render_pass(command_buffer);
-                logical_device.end_command_buffer(command_buffer)?;
-            }
+            },
+        ];
+
+        let renderpass_begin_info = vk::RenderPassBeginInfo::builder()
+            .render_pass(self.renderpass)
+            .framebuffer(self.swapchain.framebuffers[index])
+            .render_area(vk::Rect2D {
+                offset: vk::Offset2D { x: 0, y: 0 },
+                extent: self.swapchain.extent,
+            })
+            .clear_values(&clear_values);
+        unsafe {
+            self.logical_device.cmd_begin_render_pass(
+                command_buffer,
+                &renderpass_begin_info,
+                vk::SubpassContents::INLINE,
+            );
+            self.logical_device.cmd_bind_pipeline(
+                command_buffer,
+                vk::PipelineBindPoint::GRAPHICS,
+                self.pipeline.pipeline,
+            );
+            self.models
+                .iter()
+                .for_each(|m| m.draw(&self.logical_device, command_buffer));
+            self.logical_device.cmd_end_render_pass(command_buffer);
+            self.logical_device.end_command_buffer(command_buffer)?;
         }
+
         Ok(())
     }
 }
