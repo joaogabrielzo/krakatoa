@@ -42,6 +42,9 @@ impl Krakatoa {
         let (physical_device, physical_device_properties, physical_device_features) =
             init_physical_device_and_properties(&instance)?;
 
+        let memory_properties =
+            unsafe { instance.get_physical_device_memory_properties(physical_device) };
+
         let surface = Surface::init(&window, &entry, &instance)?;
 
         /* Queues */
@@ -68,6 +71,7 @@ impl Krakatoa {
             &surface,
             &queue_families,
             &queues,
+            memory_properties,
         )?;
         swapchain.create_framebuffers(&logical_device, renderpass)?;
 
@@ -75,26 +79,18 @@ impl Krakatoa {
         let pipeline = Pipeline::init(&logical_device, &swapchain, &renderpass)?;
 
         /* Mem Allocation */
-        let memory_properties =
-            unsafe { instance.get_physical_device_memory_properties(physical_device) };
-
         let mut cube = Model::cube();
         cube.insert_visibly(InstanceData {
-            model_matrix: Matrix4::new_scaling(0.1).into(),
-            colour: [1.0, 0.0, 0.0],
-        });
-        cube.insert_visibly(InstanceData {
-            model_matrix: (Matrix4::new_translation(&Vector3::new(0.0, 0.25, 0.0))
+            model_matrix: (Matrix4::new_translation(&Vector3::new(0.0, 0.0, 0.1))
                 * Matrix4::new_scaling(0.1))
             .into(),
-            colour: [0.6, 0.5, 0.0],
+            colour: [0.2, 0.4, 1.0],
         });
         cube.insert_visibly(InstanceData {
-            model_matrix: (Matrix4::new_translation(&Vector3::new(0.0, 0.5, 0.0))
-                * Matrix4::from_scaled_axis(Vector3::new(0.0, 0.0, std::f32::consts::FRAC_PI_3))
+            model_matrix: (Matrix4::new_translation(&Vector3::new(0.05, 0.05, 0.0))
                 * Matrix4::new_scaling(0.1))
             .into(),
-            colour: [0.0, 0.5, 0.0],
+            colour: [1.0, 1.0, 0.2],
         });
         cube.update_vertex_buffer(&logical_device, memory_properties)?;
         cube.update_instance_buffer(&logical_device, memory_properties)?;
@@ -149,11 +145,19 @@ impl Krakatoa {
             unsafe {
                 logical_device.begin_command_buffer(command_buffer, &command_buffer_begin_info)?;
             }
-            let clearvalues = [vk::ClearValue {
-                color: vk::ClearColorValue {
-                    float32: [0.4, 0.5, 0.6, 1.0],
+            let clearvalues = [
+                vk::ClearValue {
+                    color: vk::ClearColorValue {
+                        float32: [0.4, 0.5, 0.6, 1.0],
+                    },
                 },
-            }];
+                vk::ClearValue {
+                    depth_stencil: vk::ClearDepthStencilValue {
+                        depth: 1.0,
+                        stencil: 0,
+                    },
+                },
+            ];
             let renderpass_begin_info = vk::RenderPassBeginInfo::builder()
                 .render_pass(*renderpass)
                 .framebuffer(swapchain.framebuffers[i])

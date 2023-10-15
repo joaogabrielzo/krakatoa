@@ -133,6 +133,10 @@ impl Pipeline {
             .build()];
         let colourblend_info =
             vk::PipelineColorBlendStateCreateInfo::builder().attachments(&colourblend_attachments);
+        let depth_stencil_info = vk::PipelineDepthStencilStateCreateInfo::builder()
+            .depth_test_enable(true)
+            .depth_write_enable(true)
+            .depth_compare_op(vk::CompareOp::LESS_OR_EQUAL);
 
         /* Pipeline */
 
@@ -147,6 +151,7 @@ impl Pipeline {
             .viewport_state(&viewport_info)
             .rasterization_state(&rasterizer_info)
             .multisample_state(&multisampler_info)
+            .depth_stencil_state(&depth_stencil_info)
             .color_blend_state(&colourblend_info)
             .layout(pipeline_layout)
             .render_pass(*renderpass)
