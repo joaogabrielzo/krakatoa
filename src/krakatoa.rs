@@ -1,3 +1,4 @@
+use crate::buffer::Buffer;
 use crate::create_command_buffers;
 use crate::model::{InstanceData, Model};
 use crate::pipeline::Pipeline;
@@ -31,6 +32,9 @@ pub struct Krakatoa {
     pub pools: Pools,
     pub command_buffers: Vec<vk::CommandBuffer>,
     pub models: Vec<Model<[f32; 3], InstanceData>>,
+    pub uniform_buffer: Buffer,
+    pub descriptor_pool: vk::DescriptorPool,
+    pub descriptor_sets: Vec<vk::DescriptorSet>,
 }
 
 impl Krakatoa {
@@ -98,6 +102,49 @@ impl Krakatoa {
         let command_buffers =
             create_command_buffers(&logical_device, &pools, swapchain.framebuffers.len())?;
 
+        /* Uniform Buffers */
+        let mut uniform_buffer = Buffer::init(
+            64,
+            vk::BufferUsageFlags::UNIFORM_BUFFER,
+            memory_properties,
+            &logical_device,
+        )?;
+        let camera_transform: [[f32; 4]; 4] = Matrix4::identity().into();
+        uniform_buffer.fill(&logical_device, &camera_transform, memory_properties)?;
+
+        /* Descriptor Pool */
+        let pool_sizes = [vk::DescriptorPoolSize {
+            ty: vk::DescriptorType::UNIFORM_BUFFER,
+            descriptor_count: swapchain.amount_of_images as u32,
+        }];
+        let descriptor_pool_info = vk::DescriptorPoolCreateInfo::builder()
+            .max_sets(swapchain.amount_of_images as u32)
+            .pool_sizes(&pool_sizes);
+        let descriptor_pool =
+            unsafe { logical_device.create_descriptor_pool(&descriptor_pool_info, None) }?;
+
+        let desc_layouts = vec![pipeline.descriptor_set_layouts[0]; swapchain.amount_of_images];
+        let descriptor_set_allocate_info = vk::DescriptorSetAllocateInfo::builder()
+            .descriptor_pool(descriptor_pool)
+            .set_layouts(&desc_layouts);
+        let descriptor_sets =
+            unsafe { logical_device.allocate_descriptor_sets(&descriptor_set_allocate_info) }?;
+
+        descriptor_sets.iter().for_each(|descset| {
+            let buffer_infos = [vk::DescriptorBufferInfo {
+                buffer: uniform_buffer.buffer,
+                offset: 0,
+                range: 64,
+            }];
+            let desc_sets_write = [vk::WriteDescriptorSet::builder()
+                .dst_set(*descset)
+                .dst_binding(0)
+                .descriptor_type(vk::DescriptorType::UNIFORM_BUFFER)
+                .buffer_info(&buffer_infos)
+                .build()];
+            unsafe { logical_device.update_descriptor_sets(&desc_sets_write, &[]) };
+        });
+
         Ok(Self {
             window,
             entry,
@@ -116,6 +163,9 @@ impl Krakatoa {
             pools,
             command_buffers,
             models,
+            uniform_buffer,
+            descriptor_pool,
+            descriptor_sets,
         })
     }
 
@@ -160,6 +210,14 @@ impl Krakatoa {
                 vk::PipelineBindPoint::GRAPHICS,
                 self.pipeline.pipeline,
             );
+            self.logical_device.cmd_bind_descriptor_sets(
+                command_buffer,
+                vk::PipelineBindPoint::GRAPHICS,
+                self.pipeline.layout,
+                0,
+                &[self.descriptor_sets[index]],
+                &[],
+            );
             self.models
                 .iter()
                 .for_each(|m| m.draw(&self.logical_device, command_buffer));
@@ -177,6 +235,10 @@ impl Drop for Krakatoa {
             self.logical_device
                 .device_wait_idle()
                 .expect("Something wrong while waiting.");
+            self.logical_device
+                .destroy_buffer(self.uniform_buffer.buffer, None);
+            self.logical_device
+                .destroy_descriptor_pool(self.descriptor_pool, None);
             for m in &self.models {
                 if let Some(vb) = &m.vertex_buffer {
                     self.logical_device.destroy_buffer(vb.buffer, None);

@@ -1,4 +1,5 @@
 pub mod buffer;
+pub mod camera;
 pub mod debug;
 pub mod krakatoa;
 pub mod model;
@@ -104,12 +105,18 @@ pub fn init_device_and_queues(
             .queue_priorities(&priorities)
             .build(),
     ];
-    let device_extension_name_pointers: Vec<*const i8> =
-        vec![ash::extensions::khr::Swapchain::name().as_ptr()];
+    let device_extension_name_pointers: Vec<*const i8> = vec![
+        ash::extensions::khr::Swapchain::name().as_ptr(),
+        vk::KhrPortabilitySubsetFn::name().as_ptr(),
+    ];
+    let mut physical_device_separate_depth =
+        vk::PhysicalDeviceSeparateDepthStencilLayoutsFeatures::builder()
+            .separate_depth_stencil_layouts(true);
     let device_create_info = vk::DeviceCreateInfo::builder()
         .queue_create_infos(&queue_infos)
         .enabled_extension_names(&device_extension_name_pointers)
-        .enabled_features(&physical_device_features);
+        .enabled_features(&physical_device_features)
+        .push_next(&mut physical_device_separate_depth);
 
     let logical_device =
         unsafe { instance.create_device(physical_device, &device_create_info, None)? };

@@ -44,6 +44,7 @@ impl Buffer {
             .allocation_size(requirements.size)
             .memory_type_index(memory_index);
         let memory = unsafe { logical_device.allocate_memory(&allocate_info, None) }?;
+        unsafe { logical_device.bind_buffer_memory(buffer, memory, 0) }?;
 
         Ok(Self {
             buffer,
@@ -89,7 +90,6 @@ impl Buffer {
         align.copy_from_slice(data);
 
         unsafe { logical_device.unmap_memory(self.memory) };
-        unsafe { logical_device.bind_buffer_memory(self.buffer, self.memory, 0) }?;
 
         Ok(())
     }

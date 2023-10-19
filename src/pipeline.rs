@@ -5,6 +5,7 @@ use ash::vk;
 pub struct Pipeline {
     pub pipeline: vk::Pipeline,
     pub layout: vk::PipelineLayout,
+    pub descriptor_set_layouts: Vec<vk::DescriptorSetLayout>,
 }
 
 impl Pipeline {
@@ -138,9 +139,25 @@ impl Pipeline {
             .depth_write_enable(true)
             .depth_compare_op(vk::CompareOp::LESS_OR_EQUAL);
 
-        /* Pipeline */
+        /* Descriptor Set Layout */
+        let descriptorset_layout_binding_descs = [vk::DescriptorSetLayoutBinding::builder()
+            .binding(0)
+            .descriptor_type(vk::DescriptorType::UNIFORM_BUFFER)
+            .descriptor_count(1)
+            .stage_flags(vk::ShaderStageFlags::VERTEX)
+            .build()];
+        let descriptorset_layout_info = vk::DescriptorSetLayoutCreateInfo::builder()
+            .bindings(&descriptorset_layout_binding_descs);
+        let descriptorset_layout = unsafe {
+            logical_device.create_descriptor_set_layout(&descriptorset_layout_info, None)
+        }?;
+        let descriptor_layouts = vec![descriptorset_layout];
+        let _pipeline_layout_info =
+            vk::PipelineLayoutCreateInfo::builder().set_layouts(&descriptor_layouts);
 
-        let pipeline_layout_info = vk::PipelineLayoutCreateInfo::builder();
+        /* Pipeline */
+        let pipeline_layout_info =
+            vk::PipelineLayoutCreateInfo::builder().set_layouts(&descriptor_layouts);
         let pipeline_layout =
             unsafe { logical_device.create_pipeline_layout(&pipeline_layout_info, None) }?;
 
@@ -174,11 +191,15 @@ impl Pipeline {
         Ok(Pipeline {
             pipeline: graphics_pipeline,
             layout: pipeline_layout,
+            descriptor_set_layouts: descriptor_layouts,
         })
     }
 
     pub fn cleanup(&self, logical_device: &ash::Device) {
         unsafe {
+            for dsl in &self.descriptor_set_layouts {
+                logical_device.destroy_descriptor_set_layout(*dsl, None);
+            }
             logical_device.destroy_pipeline(self.pipeline, None);
             logical_device.destroy_pipeline_layout(self.layout, None);
         }
