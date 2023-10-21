@@ -87,7 +87,7 @@ fn main() -> Result<()> {
 
     krakatoa.models = vec![cube];
 
-    let mut camera = Camera::default();
+    let mut camera = Camera::builder().build();
 
     use winit::event::{Event, WindowEvent};
     event_loop.run(move |event, _, controlflow| match event {

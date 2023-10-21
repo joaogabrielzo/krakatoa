@@ -104,13 +104,14 @@ impl Krakatoa {
 
         /* Uniform Buffers */
         let mut uniform_buffer = Buffer::init(
-            64,
+            128,
             vk::BufferUsageFlags::UNIFORM_BUFFER,
             memory_properties,
             &logical_device,
         )?;
-        let camera_transform: [[f32; 4]; 4] = Matrix4::identity().into();
-        uniform_buffer.fill(&logical_device, &camera_transform, memory_properties)?;
+        let camera_transforms: [[[f32; 4]; 4]; 2] =
+            [Matrix4::identity().into(), Matrix4::identity().into()];
+        uniform_buffer.fill(&logical_device, &camera_transforms, memory_properties)?;
 
         /* Descriptor Pool */
         let pool_sizes = [vk::DescriptorPoolSize {
@@ -134,7 +135,7 @@ impl Krakatoa {
             let buffer_infos = [vk::DescriptorBufferInfo {
                 buffer: uniform_buffer.buffer,
                 offset: 0,
-                range: 64,
+                range: 128,
             }];
             let desc_sets_write = [vk::WriteDescriptorSet::builder()
                 .dst_set(*descset)
