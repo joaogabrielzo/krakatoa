@@ -3,10 +3,10 @@ use ash::vk;
 use krakatoa::camera::Camera;
 use krakatoa::krakatoa::Krakatoa;
 use krakatoa::model::{InstanceData, Model};
-use nalgebra::{Matrix4, Vector3};
+use nalgebra::Matrix4;
+use winit::event::VirtualKeyCode;
 use winit::event_loop::EventLoop;
 use winit::window::WindowBuilder;
-use winit::event::VirtualKeyCode;
 
 fn main() -> Result<()> {
     /* Window */
@@ -15,82 +15,26 @@ fn main() -> Result<()> {
         .with_title("Krakatoa")
         .build(&event_loop)?;
     let mut krakatoa = Krakatoa::init(window)?;
-    let mut cube = Model::cube();
-    cube.insert_visibly(InstanceData {
-        model_matrix: (Matrix4::new_translation(&Vector3::new(0.0, 0.0, 0.1))
-            * Matrix4::new_scaling(0.1))
-        .into(),
-        colour: [0.2, 0.4, 1.0],
-    });
-    cube.insert_visibly(InstanceData {
-        model_matrix: (Matrix4::new_translation(&Vector3::new(0.05, 0.05, 0.0))
-            * Matrix4::new_scaling(0.1))
-        .into(),
-        colour: [1.0, 1.0, 0.2],
-    });
-    for i in 0..10 {
-        for j in 0..10 {
-            cube.insert_visibly(InstanceData {
-                model_matrix: (Matrix4::new_translation(&Vector3::new(
-                    i as f32 * 0.2 - 1.0,
-                    j as f32 * 0.2 - 1.0,
-                    0.5,
-                )) * Matrix4::new_scaling(0.03))
-                .into(),
-                colour: [1.0, i as f32 * 0.07, j as f32 * 0.07],
-            });
-            cube.insert_visibly(InstanceData {
-                model_matrix: (Matrix4::new_translation(&Vector3::new(
-                    i as f32 * 0.2 - 1.0,
-                    0.0,
-                    j as f32 * 0.2 - 1.0,
-                )) * Matrix4::new_scaling(0.02))
-                .into(),
-                colour: [i as f32 * 0.07, j as f32 * 0.07, 1.0],
-            });
-        }
-    }
-    cube.insert_visibly(InstanceData {
-        model_matrix: (Matrix4::from_scaled_axis(Vector3::new(0.0, 0.0, 1.4))
-            * Matrix4::new_translation(&Vector3::new(0.0, 0.5, 0.0))
-            * Matrix4::new_scaling(0.1))
-        .into(),
-        colour: [0.0, 0.5, 0.0],
-    });
-    cube.insert_visibly(InstanceData {
-        model_matrix: (Matrix4::new_translation(&Vector3::new(0.5, 0.0, 0.0))
-            * Matrix4::new_nonuniform_scaling(&Vector3::new(0.5, 0.01, 0.01)))
-        .into(),
-        colour: [1.0, 0.5, 0.5],
-    });
-    cube.insert_visibly(InstanceData {
-        model_matrix: (Matrix4::new_translation(&Vector3::new(0.0, 0.5, 0.0))
-            * Matrix4::new_nonuniform_scaling(&Vector3::new(0.01, 0.5, 0.01)))
-        .into(),
-        colour: [0.5, 1.0, 0.5],
+    let mut sphere = Model::sphere(3);
+    sphere.insert_visibly(InstanceData {
+        model_matrix: Matrix4::new_scaling(0.5).into(),
+        colour: [0.5, 0.0, 0.0],
     });
 
-    cube.insert_visibly(InstanceData {
-        model_matrix: (Matrix4::new_translation(&Vector3::new(0.0, 0.0, 0.0))
-            * Matrix4::new_nonuniform_scaling(&Vector3::new(0.01, 0.01, 0.5)))
-        .into(),
-        colour: [0.5, 0.5, 1.0],
-    });
-
-    cube.update_vertex_buffer(
+    sphere.update_vertex_buffer(
         &krakatoa.logical_device,
         krakatoa.physical_device_memory_properties,
     )?;
-    cube.update_index_buffer(
+    sphere.update_index_buffer(
         &krakatoa.logical_device,
         krakatoa.physical_device_memory_properties,
     )?;
-    cube.update_instance_buffer(
+    sphere.update_instance_buffer(
         &krakatoa.logical_device,
         krakatoa.physical_device_memory_properties,
     )?;
 
-    krakatoa.models = vec![cube];
+    krakatoa.models = vec![sphere];
 
     let mut camera = Camera::builder().build();
 
