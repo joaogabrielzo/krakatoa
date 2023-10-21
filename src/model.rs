@@ -7,12 +7,14 @@ where
     I: Copy,
 {
     pub vertex_data: Vec<V>,
+    pub index_data: Vec<u32>,
     pub handle_to_index: std::collections::HashMap<usize, usize>,
     pub handles: Vec<usize>,
     pub instances: Vec<I>,
     pub first_invisible: usize,
     pub next_handle: usize,
     pub vertex_buffer: Option<Buffer>,
+    pub index_buffer: Option<Buffer>,
     pub instance_buffer: Option<Buffer>,
 }
 
@@ -157,7 +159,30 @@ impl<V: Copy, I: Copy> Model<V, I> {
             buffer.fill(logical_device, &self.vertex_data, memory_properties)?;
             self.vertex_buffer = Some(buffer);
 
-            anyhow::Ok(())
+            Ok(())
+        }
+    }
+
+    pub fn update_index_buffer(
+        &mut self,
+        logical_device: &ash::Device,
+        memory_properties: vk::PhysicalDeviceMemoryProperties,
+    ) -> anyhow::Result<()> {
+        if let Some(buffer) = &mut self.index_buffer {
+            buffer.fill(logical_device, &self.index_data, memory_properties)?;
+            Ok(())
+        } else {
+            let bytes = self.index_data.len() * std::mem::size_of::<u32>();
+            let mut buffer = Buffer::init(
+                bytes,
+                vk::BufferUsageFlags::INDEX_BUFFER,
+                memory_properties,
+                logical_device,
+            )?;
+            buffer.fill(logical_device, &self.index_data, memory_properties)?;
+            self.index_buffer = Some(buffer);
+
+            Ok(())
         }
     }
 
@@ -202,16 +227,23 @@ impl<V: Copy, I: Copy> Model<V, I> {
                             &[vertex_buffer.buffer],
                             &[0],
                         );
+                        logical_device.cmd_bind_index_buffer(
+                            command_buffer,
+                            self.index_buffer.as_ref().unwrap().buffer,
+                            0,
+                            vk::IndexType::UINT32,
+                        );
                         logical_device.cmd_bind_vertex_buffers(
                             command_buffer,
                             1,
                             &[instance_buffer.buffer],
                             &[0],
                         );
-                        logical_device.cmd_draw(
+                        logical_device.cmd_draw_indexed(
                             command_buffer,
-                            self.vertex_data.len() as u32,
+                            self.index_data.len() as u32,
                             self.first_invisible as u32,
+                            0,
                             0,
                             0,
                         );
@@ -234,13 +266,14 @@ impl Model<[f32; 3], InstanceData> {
         let rtb = [1.0, -1.0, 1.0];
 
         Model {
-            vertex_data: vec![
-                lbf, lbb, rbb, lbf, rbb, rbf, //bottom
-                ltf, rtb, ltb, ltf, rtf, rtb, //top
-                lbf, rtf, ltf, lbf, rbf, rtf, //front
-                lbb, ltb, rtb, lbb, rtb, rbb, //back
-                lbf, ltf, lbb, lbb, ltf, ltb, //left
-                rbf, rbb, rtf, rbb, rtb, rtf, //right
+            vertex_data: vec![lbf, lbb, ltf, ltb, rbf, rbb, rtf, rtb],
+            index_data: vec![
+                0, 1, 5, 0, 5, 4, //bottom
+                2, 7, 3, 2, 6, 7, //top
+                0, 6, 2, 0, 4, 6, //front
+                1, 3, 7, 1, 7, 5, //back
+                0, 2, 1, 1, 2, 3, //left
+                4, 5, 6, 5, 7, 6, //right
             ],
             handle_to_index: std::collections::HashMap::new(),
             handles: Vec::new(),
@@ -248,6 +281,7 @@ impl Model<[f32; 3], InstanceData> {
             first_invisible: 0,
             next_handle: 0,
             vertex_buffer: None,
+            index_buffer: None,
             instance_buffer: None,
         }
     }

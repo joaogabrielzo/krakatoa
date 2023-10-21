@@ -247,6 +247,9 @@ impl Drop for Krakatoa {
                 if let Some(ib) = &m.instance_buffer {
                     self.logical_device.destroy_buffer(ib.buffer, None);
                 }
+                if let Some(ib) = &m.index_buffer {
+                    self.logical_device.destroy_buffer(ib.buffer, None);
+                };
             }
             self.pools.cleanup(&self.logical_device);
             self.pipeline.cleanup(&self.logical_device);

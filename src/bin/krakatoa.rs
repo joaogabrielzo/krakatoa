@@ -6,6 +6,7 @@ use krakatoa::model::{InstanceData, Model};
 use nalgebra::{Matrix4, Vector3};
 use winit::event_loop::EventLoop;
 use winit::window::WindowBuilder;
+use winit::event::VirtualKeyCode;
 
 fn main() -> Result<()> {
     /* Window */
@@ -80,6 +81,10 @@ fn main() -> Result<()> {
         &krakatoa.logical_device,
         krakatoa.physical_device_memory_properties,
     )?;
+    cube.update_index_buffer(
+        &krakatoa.logical_device,
+        krakatoa.physical_device_memory_properties,
+    )?;
     cube.update_instance_buffer(
         &krakatoa.logical_device,
         krakatoa.physical_device_memory_properties,
@@ -100,22 +105,22 @@ fn main() -> Result<()> {
                 virtual_keycode: Some(keycode),
                 ..
             } => match keycode {
-                winit::event::VirtualKeyCode::Right => {
+                VirtualKeyCode::Right | VirtualKeyCode::D => {
                     camera.turn_right(0.1);
                 }
-                winit::event::VirtualKeyCode::Left => {
+                VirtualKeyCode::Left | VirtualKeyCode::A => {
                     camera.turn_left(0.1);
                 }
-                winit::event::VirtualKeyCode::Up => {
+                VirtualKeyCode::Up | VirtualKeyCode::W => {
                     camera.move_forward(0.05);
                 }
-                winit::event::VirtualKeyCode::Down => {
+                VirtualKeyCode::Down | VirtualKeyCode::S => {
                     camera.move_backward(0.05);
                 }
-                winit::event::VirtualKeyCode::PageUp => {
+                VirtualKeyCode::PageUp | VirtualKeyCode::Q => {
                     camera.turn_up(0.02);
                 }
-                winit::event::VirtualKeyCode::PageDown => {
+                VirtualKeyCode::PageDown | VirtualKeyCode::E => {
                     camera.turn_down(0.02);
                 }
                 _ => {}
