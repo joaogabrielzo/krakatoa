@@ -3,7 +3,9 @@
 layout (location = 0) out vec4 theColour;
 
 layout (location = 0) in vec4 aColor;
+layout (location = 1) in vec3 normal;
 
 void main() {
-    theColour = aColor;
+    vec3 direction_to_light = normalize(vec3(-1, -1, 0));
+    theColour = 0.5 * (1 + max(dot(normal, direction_to_light), 0)) * aColor;
 }

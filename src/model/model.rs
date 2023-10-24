@@ -1,6 +1,8 @@
 use crate::buffer::Buffer;
 use ash::vk;
 
+use super::{instance::InstanceData, vertex::normalize, InvalidHandle, VertexData};
+
 pub struct Model<V, I>
 where
     V: Copy,
@@ -254,16 +256,40 @@ impl<V: Copy, I: Copy> Model<V, I> {
     }
 }
 
-impl Model<[f32; 3], InstanceData> {
+impl Model<VertexData, InstanceData> {
     pub fn cube() -> Self {
-        let lbf = [-1.0, 1.0, 0.0]; //lbf: left-bottom-front
-        let lbb = [-1.0, 1.0, 1.0];
-        let ltf = [-1.0, -1.0, 0.0];
-        let ltb = [-1.0, -1.0, 1.0];
-        let rbf = [1.0, 1.0, 0.0];
-        let rbb = [1.0, 1.0, 1.0];
-        let rtf = [1.0, -1.0, 0.0];
-        let rtb = [1.0, -1.0, 1.0];
+        let lbf = VertexData {
+            position: [-1.0, 1.0, 0.0],
+            normal: [-1.0, 1.0, 0.0],
+        };
+        let lbb = VertexData {
+            position: [-1.0, 1.0, 1.0],
+            normal: [-1.0, 1.0, 1.0],
+        };
+        let ltf = VertexData {
+            position: [-1.0, -1.0, 0.0],
+            normal: [-1.0, -1.0, 0.0],
+        };
+        let ltb = VertexData {
+            position: [-1.0, -1.0, 1.0],
+            normal: [-1.0, -1.0, 1.0],
+        };
+        let rbf = VertexData {
+            position: [1.0, 1.0, 0.0],
+            normal: [1.0, 1.0, 0.0],
+        };
+        let rbb = VertexData {
+            position: [1.0, 1.0, 1.0],
+            normal: [1.0, 1.0, 1.0],
+        };
+        let rtf = VertexData {
+            position: [1.0, -1.0, 0.0],
+            normal: [1.0, -1.0, 0.0],
+        };
+        let rtb = VertexData {
+            position: [1.0, -1.0, 1.0],
+            normal: [1.0, -1.0, 1.0],
+        };
 
         Model {
             vertex_data: vec![lbf, lbb, ltf, ltb, rbf, rbb, rtf, rtb],
@@ -292,8 +318,7 @@ impl Model<[f32; 3], InstanceData> {
             model.refine();
         }
         for v in &mut model.vertex_data {
-            let l = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
-            *v = [v[0] / l, v[1] / l, v[2] / l];
+            v.position = normalize(v.position);
         }
 
         model
@@ -301,18 +326,54 @@ impl Model<[f32; 3], InstanceData> {
 
     pub fn icosahedron() -> Self {
         let phi = (1.0 + 5.0_f32.sqrt()) / 2.0;
-        let darkgreen_front_top = [phi, -1.0, 0.0]; //0
-        let darkgreen_front_bottom = [phi, 1.0, 0.0]; //1
-        let darkgreen_back_top = [-phi, -1.0, 0.0]; //2
-        let darkgreen_back_bottom = [-phi, 1.0, 0.0]; //3
-        let lightgreen_front_right = [1.0, 0.0, -phi]; //4
-        let lightgreen_front_left = [-1.0, 0.0, -phi]; //5
-        let lightgreen_back_right = [1.0, 0.0, phi]; //6
-        let lightgreen_back_left = [-1.0, 0.0, phi]; //7
-        let purple_top_left = [0.0, -phi, -1.0]; //8
-        let purple_top_right = [0.0, -phi, 1.0]; //9
-        let purple_bottom_left = [0.0, phi, -1.0]; //10
-        let purple_bottom_right = [0.0, phi, 1.0]; //11
+        let darkgreen_front_top = VertexData {
+            position: [phi, -1.0, 0.0],
+            normal: normalize([phi, -1.0, 0.0]),
+        }; //0
+        let darkgreen_front_bottom = VertexData {
+            position: [phi, 1.0, 0.0],
+            normal: normalize([phi, 1.0, 0.0]),
+        }; //1
+        let darkgreen_back_top = VertexData {
+            position: [-phi, -1.0, 0.0],
+            normal: normalize([-phi, -1.0, 0.0]),
+        }; //2
+        let darkgreen_back_bottom = VertexData {
+            position: [-phi, 1.0, 0.0],
+            normal: normalize([-phi, 1.0, 0.0]),
+        }; //3
+        let lightgreen_front_right = VertexData {
+            position: [1.0, 0.0, -phi],
+            normal: normalize([1.0, 0.0, -phi]),
+        }; //4
+        let lightgreen_front_left = VertexData {
+            position: [-1.0, 0.0, -phi],
+            normal: normalize([-1.0, 0.0, -phi]),
+        }; //5
+        let lightgreen_back_right = VertexData {
+            position: [1.0, 0.0, phi],
+            normal: normalize([1.0, 0.0, phi]),
+        }; //6
+        let lightgreen_back_left = VertexData {
+            position: [-1.0, 0.0, phi],
+            normal: normalize([-1.0, 0.0, phi]),
+        }; //7
+        let purple_top_left = VertexData {
+            position: [0.0, -phi, -1.0],
+            normal: normalize([0.0, -phi, -1.0]),
+        }; //8
+        let purple_top_right = VertexData {
+            position: [0.0, -phi, 1.0],
+            normal: normalize([0.0, -phi, 1.0]),
+        }; //9
+        let purple_bottom_left = VertexData {
+            position: [0.0, phi, -1.0],
+            normal: normalize([0.0, phi, -1.0]),
+        }; //10
+        let purple_bottom_right = VertexData {
+            position: [0.0, phi, 1.0],
+            normal: normalize([0.0, phi, 1.0]),
+        }; //11
 
         Model {
             vertex_data: vec![
@@ -362,7 +423,7 @@ impl Model<[f32; 3], InstanceData> {
         }
     }
 
-    fn refine(&mut self) {
+    pub fn refine(&mut self) {
         let mut new_indices = vec![];
         let mut midpoints = std::collections::HashMap::<(u32, u32), u32>::new();
         for triangle in self.index_data.chunks(3) {
@@ -375,11 +436,7 @@ impl Model<[f32; 3], InstanceData> {
             let mab = if let Some(ab) = midpoints.get(&(a, b)) {
                 *ab
             } else {
-                let vertex_ab = [
-                    0.5 * (vertex_a[0] + vertex_b[0]),
-                    0.5 * (vertex_a[1] + vertex_b[1]),
-                    0.5 * (vertex_a[2] + vertex_b[2]),
-                ];
+                let vertex_ab = VertexData::midpoint(&vertex_a, &vertex_b);
                 let mab = self.vertex_data.len() as u32;
                 self.vertex_data.push(vertex_ab);
                 midpoints.insert((a, b), mab);
@@ -389,11 +446,7 @@ impl Model<[f32; 3], InstanceData> {
             let mbc = if let Some(bc) = midpoints.get(&(b, c)) {
                 *bc
             } else {
-                let vertex_bc = [
-                    0.5 * (vertex_b[0] + vertex_c[0]),
-                    0.5 * (vertex_b[1] + vertex_c[1]),
-                    0.5 * (vertex_b[2] + vertex_c[2]),
-                ];
+                let vertex_bc = VertexData::midpoint(&vertex_b, &vertex_c);
                 let mbc = self.vertex_data.len() as u32;
                 midpoints.insert((b, c), mbc);
                 midpoints.insert((c, b), mbc);
@@ -403,11 +456,7 @@ impl Model<[f32; 3], InstanceData> {
             let mca = if let Some(ca) = midpoints.get(&(c, a)) {
                 *ca
             } else {
-                let vertex_ca = [
-                    0.5 * (vertex_c[0] + vertex_a[0]),
-                    0.5 * (vertex_c[1] + vertex_a[1]),
-                    0.5 * (vertex_c[2] + vertex_a[2]),
-                ];
+                let vertex_ca = VertexData::midpoint(&vertex_c, &vertex_a);
                 let mca = self.vertex_data.len() as u32;
                 midpoints.insert((c, a), mca);
                 midpoints.insert((a, c), mca);
@@ -417,25 +466,5 @@ impl Model<[f32; 3], InstanceData> {
             new_indices.extend_from_slice(&[mca, a, mab, mab, b, mbc, mbc, c, mca, mab, mbc, mca]);
         }
         self.index_data = new_indices;
-    }
-}
-
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct InstanceData {
-    pub model_matrix: [[f32; 4]; 4],
-    pub colour: [f32; 3],
-}
-
-#[derive(Debug, Clone)]
-pub struct InvalidHandle;
-impl std::fmt::Display for InvalidHandle {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "invalid handle")
-    }
-}
-impl std::error::Error for InvalidHandle {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        None
     }
 }

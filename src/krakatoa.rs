@@ -1,6 +1,6 @@
 use crate::buffer::Buffer;
 use crate::create_command_buffers;
-use crate::model::{InstanceData, Model};
+use crate::model::{InstanceData, Model, VertexData};
 use crate::pipeline::Pipeline;
 use crate::pools::Pools;
 use crate::{
@@ -31,7 +31,7 @@ pub struct Krakatoa {
     pub pipeline: Pipeline,
     pub pools: Pools,
     pub command_buffers: Vec<vk::CommandBuffer>,
-    pub models: Vec<Model<[f32; 3], InstanceData>>,
+    pub models: Vec<Model<VertexData, InstanceData>>,
     pub uniform_buffer: Buffer,
     pub descriptor_pool: vk::DescriptorPool,
     pub descriptor_sets: Vec<vk::DescriptorSet>,
@@ -85,13 +85,12 @@ impl Krakatoa {
         /* Mem Allocation */
         let mut cube = Model::cube();
         let angle = 0.2;
-        cube.insert_visibly(InstanceData {
-            model_matrix: (Matrix4::from_scaled_axis(Vector3::new(0.0, 0.0, angle))
+        cube.insert_visibly(InstanceData::from_matrix_and_colour(
+            Matrix4::from_scaled_axis(Vector3::new(0.0, 0.0, angle))
                 * Matrix4::new_translation(&Vector3::new(0.0, 0.5, 0.0))
-                * Matrix4::new_scaling(0.1))
-            .into(),
-            colour: [0.0, 0.5, 0.0],
-        });
+                * Matrix4::new_scaling(0.1),
+            [0.0, 0.5, 0.0],
+        ));
         cube.update_vertex_buffer(&logical_device, memory_properties)?;
         cube.update_instance_buffer(&logical_device, memory_properties)?;
 

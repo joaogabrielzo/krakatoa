@@ -16,10 +16,10 @@ fn main() -> Result<()> {
         .build(&event_loop)?;
     let mut krakatoa = Krakatoa::init(window)?;
     let mut sphere = Model::sphere(3);
-    sphere.insert_visibly(InstanceData {
-        model_matrix: Matrix4::new_scaling(0.5).into(),
-        colour: [0.5, 0.0, 0.0],
-    });
+    sphere.insert_visibly(InstanceData::from_matrix_and_colour(
+        Matrix4::new_scaling(0.5),
+        [0.5, 0.0, 0.0],
+    ));
 
     sphere.update_vertex_buffer(
         &krakatoa.logical_device,
